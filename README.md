@@ -12,6 +12,6 @@ which may help the company deterimine valuable customers.
 - Clustering
 - Building base models
 - Building final models 
-> Using basic models
-> Using advance models
+	* Using basic models
+	* Using advance models
 - Comparing models and finding insights
