@@ -1,0 +1,767 @@
+---
+title: '**Mail-Order Company**'
+author: "Devendra Desale (A0134465E), Abhishek Sharma (A0135870A), Ning Chao (A0134563H)"
+date: "M.Tech KE27 | DMMM Project | March 2015"
+output: pdf_document
+Submitted To: Fan Zhenzhen
+---
+
+```{r setup, include=FALSE}
+## Since R markdown uses png file format to display images, pdf is used for good resolution.
+require(knitr)
+opts_chunk$set(dev = 'pdf')
+library(memisc, warn.conflicts = FALSE, quietly=TRUE)
+```
+
+##About the company:
+
+A Mail-Order company, also known as a MOC, in USA has a product they would like to promote.
+They consider a campaign offering this product for sale, directed at a given customer base. Normally, about 1% of the customer base will be "responders", customers who will purchase the product if it is offered to them. A mailing to a million randomly-chosen customers will therefore generate about ten thousand sales. Business analytics techniques enable more efficient marketting, by identifying which customers are most likely to respond the campaign. If the response can be raised from 1% to, say, 1.5% of the customers contacted, 10,000 sales could be achieved with only 666,667 mailings therby reducing the cost of mailing by one third. 
+
+##Business Objectives:
+
+* One business objective is to find which customers to promote the product to and hence build a model to predict who would be a good candidate to purchase this.
+* Another objective is to explore the data to see if any interesting and useful patterns can be discovered which may help the company deterimine valuable customers.
+
+##Data-Set Description:
+
+The file  `project.csv`  is the dataset with various attributes and related observations.
+The data was extracted from a much larger set with a response rate of about 1%. In this the objective variable is a response varialbe indicating whether or not a consumer responded to a direct mail campaign for a specific product. "True" or "response" is 1 whereas "False" or "non-response" is 0.All 1079 responders were used, together with 1079 randomly chosen non-responders, for a total of 2158 cases.
+There are 200 other expanatory variables in the dataset.
+
+`v17,v141 and v200` are indicators for gender "male", "female" or "unkown", respectively.
+
+`v1-v24, v138-v140 and v142-v144` are recency, frequency and monetary type of data for specific accounts.
+
+`v25-v136` are the census variables.
+
+`v145-v199` are demographic "taxfilers" variables.
+
+
+Along with `project.csv`, following files with short descriptions are also provided:
+
+`Census Variables - Group a.doc`
+
+`Census Variables - Group b.doc`
+
+`Taxfiler.doc`
+
+`Variables.doc`
+
+Some variable descriptions are in `variable.doc`. Some of the product-specific variables have been blinded. "p##" means product, "rcy" means recency, "trans" means number of transactions, "spend" means dollars spending. For example "p01rcy"" means product 1 recency. Note: Zero means the account has never bought the product. The greater the number, the more recent it is.
+The census and texfiler variables are summary statistics for the enumeration are in which the account holder's address is loaded. They generally give total or average numbers of individuals or families or dollars in the categories indicated. `Txfilers.doc` contains the taxfiler variable descriptions.
+
+##Data Mining Process
+
+In view of data mining, the analysis is made from a few iterative steps. The CRISP is a standard process of data mining. DM process includes steps like **Business Understanding** which means understanding the business goals and to plan for the project accordingly; **Data Exploration** which means to gather the data and explore the data by viewing the summary statistics and understanding the structure and its quality, descriptive etc analysis etc; **Data Preparation** phase includes inghts like which data need to select, transformed, and which data to be cleaned; **Modelling** includes steps to do visualizations, making decision trees, neural network ec models as per the project; **Evaluation** stage refers to the evaluation of the models based on the evaluating parameters like ROC, Risk values etc. and to analyse for further iteration of the models with different conditions; **Deployement** is the last stage of the process which lets the model to operate with business data and to analyse the model with operationg conditions. 
+
+
+###Data Exploration:
+
+
+To read `project.csv` file:
+
+```{r Load Data}
+dmm_data<-read.csv("DMMM_project/data/project.csv")
+
+```
+
+In this phase after analysis the data we will be going further with dataset improvement which will lead us to better prediction.
+
+**Renaming The Dataset**
+
+For ease of understanding and to make the dataset representable we rename the variables from "vX" to its variable name as mentioned in the provided `variables.doc`.
+We read the names of variables from `variables.csv` which have been compiled as a short summary of all the provided documents.
+
+```{r Renaming}
+variables <- read.csv('DMMM_project/data/variables.csv',header = TRUE)
+colnames(dmm_data) <-variables[,2][1:201]
+```
+
+**Data Quality Assesment:**
+
+> **Structure of dataset**
+
+To see the underlying structure of the dataset, `str()` is used.
+Hence, in the dataset, we have 201 variables and 2158 observation. 
+
+```{r Structure}
+str(dmm_data[1:10])
+```
+
+We have analysed, almost all data are continuous expect 5 records viz; v137, v139, v140, v141 and v200 (gender1, lowincome, highincome, gender2, gender, respectively) which have binary values.
+We use `summary()` function to have insight of data statistics as-well.
+
+> **Are there any Missing Values in the data set?**
+
+To check for any missing values, `complete.cases()` when used will return `TRUE` if missing values are found. To get the variables with any rows with missing values:
+
+```{r Completeness }
+dmm_data[!complete.cases(dmm_data),]
+```
+
+Running so, we get `0` rows missing. Hence we could conclude that there are no missing values.
+
+**Data Profiling:**
+
+Data Segmentation is done based on the quality of data. 
+We have created histograms, dodge histogram, boxplots of the availabe data variables with respect to objective and analyse its quality.
+For instance, `Histgram` of `p02rcy` helps us in inferring that persons who have purchased product #02 recently are likely to respond more. But after seeing its `Dodge-Histogram` we can say that the count of those persons are not so significant that we could consider accepting this fact.
+Same goes for `p04rcy` variable.
+But for the `p03rcy` we explore the fact that the people purchasing this product are more responding and are in high count. So this is a significant inefernce.
+For `totalspend` variable, persons spending below 4000$ are responding to the mails. And this is can be considered significant by analysing its `Dodge-Histogram` in which the count of those persons are high.
+
+```{r Histograms, fig.width=7, fig.height=6 }
+require(ggplot2)
+require(ggthemes)
+colnames(dmm_data) <-variables[,2][1:201]
+var.titles <- variables[,3][1:201]
+dmm.cols <- colnames(dmm_data[2:201])
+
+for(i in dmm.cols[2:5]){
+  title <- paste('Hist Of',i)
+  print(ggplot(dmm_data, aes(x=get(i), fill=factor(Objective))) +
+        theme_wsj() +
+        geom_histogram(position="fill",binwidth = diff(range(dmm_data[,i]))/30) +
+        xlab(i) +
+        ylab(paste('Frequency of',i)) +
+        ggtitle(title) +    
+        scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent"),l=50) 
+        
+        )
+}
+
+````
+
+```{r histogram-dodge, fig.width=7, fig.height=6}
+
+require(ggplot2)
+require(ggthemes)
+
+colnames(dmm_data) <-variables[,2][1:201]
+var.titles <- variables[,3][1:201]
+dmm.cols <- colnames(dmm_data[2:201])
+
+for(i in dmm.cols[2:5]){
+  print(ggplot(dmm_data, aes(x=get(i), fill=factor(Objective))) +
+        theme_wsj() +
+        geom_histogram(position="dodge",binwidth = diff(range(dmm_data[,i]))/30) +
+        xlab(i) +
+        ylab(paste('Frequency of',i)) +
+        ggtitle(paste('Histogram Of',i)) +    
+        scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent"),l=50) 
+        )
+}
+```
+
+> Boxlots:
+
+For doing the data quality analysis, we plot the boxlpots off the data. This gives information about overall pattern of response, range, outliers and other important characteristics. By performing we step we compare the range, mean distributions and outlier details and recognised which data is left or right skewed, which variables need to be scalled.
+
+```{r Boxplots, fig.width=7, fig.height=6}
+require(ggplot2)
+require(ggthemes)
+
+colnames(dmm_data) <-variables[,2][1:201]
+dmm.cols <- colnames(dmm_data)
+
+to_plots<-c("totalspend","mtenglish","dwperroom")
+  
+for(i in to_plots){
+  title <- paste('Boxplot Of',i)
+  print(ggplot(dmm_data, aes(y=get(i), x = as.factor(Objective), fill=factor(Objective))) +
+    geom_boxplot( position="dodge", notch = TRUE) +
+    scale_x_discrete(labels=c("Non-respondent", "Respondent"),name = 'Objective') +
+    scale_y_continuous(name=paste(i)) +
+    ggtitle(title) +
+    scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent")) +
+    theme_economist() +
+    coord_cartesian(ylim=c(min(dmm_data[,i]) - 0.05 * range(dmm_data[,i]), 
+         max(dmm_data[,i]) + 0.05 * range(dmm_data[,i])))          
+  )
+}
+```
+
+**Data Partitioning**
+
+
+In order to get consistent results, setting up the seed to a constant.
+```{r Set Seed}
+set.seed(1234)
+```
+
+
+
+Specifying the amount of trainig,validation and test data in ratio of 70:15:15:
+```{r Data Partitioning}
+# shuffle and split the data into three parts
+indices <- nrow(dmm_data)
+train.indeces <- sample(nrow(dmm_data), 0.7*indices) 
+validate.indices <- sample(setdiff(seq_len(nrow(dmm_data)), train.indeces), 0.15* indices)
+test.indices <- setdiff(setdiff(seq_len(nrow(dmm_data)), train.indeces), validate.indices) 
+dmm.train <- dmm_data[train.indeces,]
+dmm.test <- dmm_data[test.indices,]
+dmm.validate <- dmm_data[validate.indices,]
+
+```
+
+**Building Few Base Models**
+
+
+In any modelling techique this is the first step, to set some baseline models to check how well you have done by using data modelling techiques. Build model with all 201 variables. In our case we are going to do three widely used modelling techniques for classification:
+-Nueral Network
+-Random Forest
+-Decision Tree
+
+Because of its ease of use and support for widely used modelling techniques we have chosen to use 'caret' library.
+
+```{r Base Model,warning=FALSE,message=FALSE, fig.width=7, fig.height=6}
+set.seed(1234)
+# set label name and predictors
+labelName <- 'Objective'
+predictors <- names(dmm.train)[names(dmm.train) != labelName]
+
+library(caret)
+require(pROC)
+## create a caret control object to control the number of cross-validations performed
+# Setting: adptive_cv as method
+# Either the number of folds or number of resampling iterations = 3
+# Don't save any summary Matrix from resample
+var.control <- trainControl(method='cv', number=3, returnResamp='none')
+
+# benchmark model 1 Nueral Network
+test_nn <- train(dmm.train[,predictors], dmm.train[,labelName], method='nnet',
+                 trControl=var.control)
+
+pred_nn <- (ifelse(predict(object=test_nn, dmm.test[,predictors])< 0.5,0,1))
+auc_nn <- roc(dmm.test[,labelName], pred_nn)
+table(dmm.test$Objective,pred_nn)
+
+acc_nn <- sum(dmm.test$Objective==pred_nn) / nrow(dmm.test) #Accuracy: 0.500
+print(auc_nn$auc)  # Area under the curve: 0.5196636
+
+# benchmark model 2 Random Forest
+test_rf <- train(dmm.train[,predictors], dmm.train[,labelName], method='rf',
+                 trControl=var.control)
+
+pred_rf <- (ifelse(predict(object=test_rf, dmm.test[,predictors])< 0.5,0,1))
+auc_rf <- roc(dmm.test[,labelName], pred_rf)
+table(dmm.test$Objective,pred_rf)
+acc_rf <- sum(dmm.test$Objective==pred_rf) / nrow(dmm.test) # Accuracy: 0.7538
+print(auc_rf$auc)  # Area under the curve: 0.7518754
+
+
+# benchmark model 3 Decision Tree
+test_rpart <- train(dmm.train[,predictors], dmm.train[,labelName], 
+                    method='rpart', trControl=var.control)
+
+pred_rpart <- (ifelse(predict(object=test_rpart, dmm.test[,predictors])< 0.5,0,1))
+auc_rpart <- roc(dmm.test[,labelName], pred_rpart)
+table(dmm.test$Objective,pred_rpart)
+acc_rpart <- sum(dmm.test$Objective==pred_rpart) / nrow(dmm.test) #Accuracy: 0.69538
+print(auc_rpart$auc)  # Area under the curve: 0.7518754
+
+## Combining all the models into one Data Frame
+accuracies <- c(acc_nn,acc_rf,acc_rpart)
+auc <- c(auc_nn$auc,auc_rf$auc,auc_rpart$auc)
+bmodels <- as.data.frame(cbind(accuracies,auc))
+colnames(bmodels) <- c('Accuracies','AUC')
+rownames(bmodels) <- c('BNN','BRF','BDT')
+require(reshape)
+bmodels[ "Model" ] <- rownames(bmodels)
+model.melt <- melt( bmodels, id.vars="Model", value.name="Accuracies", variable.name="AUC" )
+
+require(ggplot2)
+require(ggthemes)
+ggplot(data=model.melt, aes(x= Model, y=value, group = variable, colour = variable)) +
+        theme_economist() +
+        geom_line() + 
+        xlab("Model") +
+        ylab("Area Under Curve") +
+        ggtitle("Baseline Model Stats") +
+        coord_cartesian(ylim= c (0,1)) +
+        geom_point()
+
+```
+
+**Data Transformation:**
+
+
+By looking on the summary statistics of the dataset by using `summary()` command, we observed 57 records to be non-normalised. The solution of this gives `Max-Min` and `Median-Mean` values. If `mean` is larger than `median` we can say the data would be right-skewed.
+
+These have to be transfomred for ahead processing to get efficient results.
+We do it by scalng variables to [0,1] the data for making our data standardize.
+
+For tranformation we could use logarithmic transformation but for data with zero we would get unacceptable results, certain observations would be imputed by default.
+
+
+```{r Scaling}
+
+scale.cols <- c("totalspend","totaltrans","cfhuswife","mtenglish","mtsingres",
+                "dw86to91","dwmaint","fiinca","fiincm","fsmlabf","hiinca",
+                "hiincm","hiincs","hlenglish","hlfrench","improvres",
+                "incgovp","ineflowp","infinca","infincm","infincs",
+                "inhhlow","inhhlowp","inmfemina","inminca","inmincm",
+                "inmincs","knenglish","lfmaunemr","lfmtunemr","lftaempl",
+                "lfttempl","lfttunemr","moy5mov","ndtallind","rlcathol",
+                "rlrcathol","first","productcount","productcount6","tenure",
+                "tf108","tf129","tf27","tf37","tf38","tf39","tf68","tf73",
+                "tf74","tf75","tf88","tf89","tf90","tf94","tf95","tf96")
+
+minVals   <- sapply(dmm.train[,scale.cols],min)
+ranges <- sapply(dmm.train[,scale.cols],function(x)diff(range(x)))
+
+train.scaled <- as.data.frame(scale(dmm.train[,scale.cols],center=minVals,scale=ranges))
+
+# Scale using the training pararmeters for minVals and Range.
+validate.scaled <- as.data.frame(scale(dmm.validate[,scale.cols],center=minVals,scale=ranges)) 
+test.scaled <- as.data.frame(scale(dmm.test[,scale.cols],center=minVals,scale=ranges)) 
+#Assignin the values to actual variables
+dmm.train[,scale.cols] <- train.scaled[,scale.cols]
+dmm.test[,scale.cols] <- test.scaled[,scale.cols]
+dmm.validate[,scale.cols] <- validate.scaled[,scale.cols]
+```
+
+
+### Knowledge Discovery
+
+In this, we will perform descriptive analysis which is a form of unsupervised learning. We will look for some kind of relationship.
+
+
+**Cluster Analysis** 
+
+For performing hierarchical clustering, we use various packages. The important one is `NbClust` library which suggest number of clusters to make to have optimised results. By plotting dendogram, we could see various clusters are made but we can see that making less then 5 clusters would be good.
+
+```{r Clustering, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+library(MASS)
+library(HSAUR)
+library(cluster)
+library(fpc)
+
+d <- dist(as.matrix(dmm.train))   # find distance matrix 
+hc <- hclust(d)                # apply hirarchical clustering 
+plot(hc)                       # plot the dendrogram
+kc <- kmeans(dmm.train, 3) 
+
+#install.packages('NbClust')
+library(NbClust)  
+# used for better cluster analysis. 
+#Gives various parameters to analysis and interpret better.
+
+nc <- NbClust(dmm.train, min.nc=3, max.nc=7, method="kmeans")
+barplot(table(nc$Best.n[1,]), 
+        xlab="Numer of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen by 26 Criteria")
+nc$Best.nc
+## Selecting 4 clusters to do clustering as per suggested by nb cluster library.
+set.seed(1234)
+fit.km <- kmeans(dmm.train, 5, nstart=25)                           #4
+fit.km$size
+table(dmm.train$Objective, fit.km$cluster)
+```
+
+From the above matrix we see clusters 3 and 2 to be interesting.
+
+`fit.km$centers`      
+
+`aggregate(dmm.train[-1], by=list(cluster=fit.km$cluster), mean)`
+
+Plotting Parallel cordinates as per the objective in order to understand the relation more.
+
+We will see that some objects will share common attributes and thus will have `similarity` characterization which means the ratio of the number of attributes two objects share in common compared to the total list of attributes between them.
+
+
+```{r Clustering 2, fig.width=7, fig.height=6}
+table(dmm.train$Objective, fit.km$cluster)
+
+plotcluster(dmm.train, fit.km$cluster)
+
+## Plotting the parallel coordinates.
+recent.cols<- c ('p01rcy','p02rcy','p03rcy','p04rcy','p06rcy','p07rcy','p08rcy',
+                 'p09rcy','p11rcy','p12rcy','p13rcy','p14rcy','p15rcy','p16rcy')
+dmm.recency <- dmm.train[,recent.cols]
+
+##Plot parallel co-ordinates using objective to understand the relation
+# Between the recency.
+parcoord(dmm.recency, col=dmm.train$Objective,var.label = TRUE)
+parcoord(dmm.recency, col=fit.km$cluster,var.label = TRUE)
+
+
+fit.km <- kmeans(dmm.train, 3, nstart=25)    
+## Plotting the silhouette
+dissE <- daisy(dmm.train) 
+dE2   <- dissE^2
+sk2   <- silhouette(fit.km$cl, dE2)
+plot(sk2)
+#3
+fit.km$size
+```
+
+Plots with high positive silhouette width values will have fit well. As visualised clearly, cluster 3 has higher silhouette widht and hence is better.
+
+`fit.km$centers`    
+
+`aggregate(dmm.train[-1], by=list(cluster=fit.km$cluster), mean)`
+
+```{r Clustering 3, fig.width=7, fig.height=6 }
+
+
+plotcluster(dmm.train, fit.km$cluster)
+
+
+## Plotting the parallel coordinates.
+recent.cols<- c ('p01rcy','p02rcy','p03rcy','p04rcy','p06rcy','p07rcy','p08rcy',
+                 'p09rcy','p11rcy','p12rcy','p13rcy','p14rcy','p15rcy','p16rcy')
+dmm.recency <- dmm.train[,recent.cols]
+
+##Plot parallel co-ordinates usiing objective to understand the relation
+# Between the recency.
+parcoord(dmm.recency, col=dmm.train$Objective,var.label = TRUE)
+parcoord(dmm.recency, col=fit.km$cluster,var.label = TRUE)
+```
+
+
+**Correlation Analysis**
+
+In order to find correlation between the variables we perform analysis based on their correlation coffecient.
+
+To find this, we write the code:
+
+
+```{r Correlation}
+
+    matrixcor <- cor(dmm.train[,1:200])
+    diag(matrixcor) <- 0
+    upper.tri <- upper.tri(matrixcor)
+    matrixcor[lower.tri(matrixcor)] <- 0     
+    xz <- as.data.frame(as.table(matrixcor))
+    names(xz) <- c("variable1", "variable2","Correlation")
+    head(xz[order(abs(xz$Correlation),decreasing=T),],n=10)
+
+```
+
+When `n=200` we could find correlation for all the variables.
+In order to check for the magnitude of the correlation large enough and thus is it really significant, we implement  `cor.test`   function and see for the `p-value` and `confidence interval`. 
+The value `p<0.05` indicates that corelation is significant. And for the `confidence interval`, if `0` is in the interval then it is possible that there is no correlation.
+
+
+```{r Pearson Test}
+cor.test(dmm.train$first, dmm.train$tenure, method="pearson")
+```
+
+> *Testing for Independence of categorial variables:*
+
+For categorial variables, represnted by factors, we check them for correlation using the `chi-squared` test. 
+We could use `table` function to get a contigency table from the two factors. I we perform the `summary()` function, we get `chi-squared` test output. Again, we check for `p-value`. If its less then the threshold value which is 0.05, we say that the variables are correlated.
+
+``` {r Chi-square}
+summary(table(dmm_data$highincome, dmm_data$lowincome))
+
+```
+
+
+
+We could perform `chisq.test()` to perform the same.
+
+After performing the same for 5 categorial variables, we get `v140 & v139` (highincome & lowincome), `v200 & v141` (gender & gender2), `v200 & v137` (gender & gender1) and `v141 & v137` (gender2 & gender1) correlated with each other.
+So the gender variable male, female and unkown are combined into one variable i.e; gender variable.
+
+To combine gender variables:
+
+```{r Combining Vars}
+# Adding combined variable to the training data
+m<-gsub("1", "1", dmm.train$gender1)
+f<-gsub("1", "2", dmm.train$gender2)
+u<-gsub("1", "3", dmm.train$gender)
+m<-cbind(m)
+f<-cbind(f)
+u<-cbind(u)
+m<-as.numeric(as.character(m[,1]))
+m<-cbind(m)
+f<-as.numeric(as.character(f[,1]))
+f<-cbind(f)
+u<-as.numeric(as.character(u[,1]))
+u<-cbind(u)
+genders<-m+f+u
+dmm.train$genders<-as.factor(genders)
+
+# Adding combined variable to the test data
+m<-gsub("1", "1", dmm.test$gender1)
+f<-gsub("1", "2", dmm.test$gender2)
+u<-gsub("1", "3", dmm.test$gender)
+m<-cbind(m)
+f<-cbind(f)
+u<-cbind(u)
+m<-as.numeric(as.character(m[,1]))
+m<-cbind(m)
+f<-as.numeric(as.character(f[,1]))
+f<-cbind(f)
+u<-as.numeric(as.character(u[,1]))
+u<-cbind(u)
+genders<-m+f+u
+dmm.test$genders<-as.factor(genders)
+
+m<-gsub("1", "1", dmm.validate$gender1)
+f<-gsub("1", "2", dmm.validate$gender2)
+u<-gsub("1", "3", dmm.validate$gender)
+m<-cbind(m)
+f<-cbind(f)
+u<-cbind(u)
+m<-as.numeric(as.character(m[,1]))
+m<-cbind(m)
+f<-as.numeric(as.character(f[,1]))
+f<-cbind(f)
+u<-as.numeric(as.character(u[,1]))
+u<-cbind(u)
+genders<-m+f+u
+dmm.validate$genders<-as.factor(genders)
+```
+
+
+**PCA**
+
+We use Principal Component Analysis to further reduce the data. We analyse for the overlapping variables in the PCA factor map. For instance, when we explore for the highly correlated variables we have written below code and get `ineflow` variables highly correlated one to be reduced:
+
+```{r PCA, include=FALSE}
+
+require(FactoMineR)
+dmm_scale <- scale(dmm_data)
+## To plot the data whose scale RStudio might not be able to handle.
+
+
+
+res <- PCA(dmm_scale)
+summary(res)
+```
+
+```{r PCA components, fig.width=7, fig.height=6}
+vars <- c('ineflow','incgovp','infincs','inhhlow')
+## For better graphics
+print(plot(res, choix = 'var',shadow = TRUE,select = vars,unselect = 0))
+
+```
+
+
+
+**Data Reduction**
+
+From the analysis done so far, we could reduce the dataset from 201 variables to 151 variables after deleting the below highly correlated variables:
+
+To further reduce the dataset, we design `random forest` model to see top variables which are importand and ignoring least important variables. Modelling is done in the next section. When Random model was made on full dataset, after analysing the top variales which are significant by comparing the `Meandecreaseaccuracy` of the variables.
+
+Hence, in total 128 variables were reduced.
+
+
+
+```{r Delete Vars}
+# Deleting the correlated variables
+delete.cols<-c("lfmtunemp","lfmtunemr","lfttempl","moy5mov","rlcathol","tf50",
+"tf56","tf70","tf73","tf89","tf91","tf95","tf96","p16rcy","mtsingres",
+"etbritish","etfrench","fiinca","p05spend","hiinca","hlenglish",
+"hlfrench","hlnonoff","improvres","imuk","incgovp","ineflow",
+"ineflowp","inf30plus","inf7to15","infinca","infincm","infincs",
+"inhhlow","inhhlowp","inm15to30","inm30plus","inm7to15","inmfemina",
+"inminca","inmincm","inmincs","knenglish","knfren","lfmaempl",
+"lfmaunemr","lfmtempl","gender1", "gender2", "gender", "tf80","highincome",
+"dwminor", "mtmultlin", "fsllabf", "tf57", "p05trans", "hiu20", "mttagalog","
+fslonepar", "hiincs", "mtspanish", "ocfteach", "tf55", "dwmajor", "fem40to44", 
+"dwmaint", "tf42", "p16spend", "ocmscieng", "mpshealth", "tf36", "fpshealth", 
+"p09tenure", "fp2child", "cftotmar", "fpshuman", "fi20to35","tf74", "tf27", 
+"cfhuswife", "sl9to13nc", "dw46to60", "p07rc", "ocmmanage","tf75", "slunivnd",
+"mpssocial", "dwperroom", "lfttunemr", "dw86to91", "mpseng","lowincome",
+"moy5intrn","tf35","ocfmanage","fp1child","mpscomm","p16trans","ndtgovser",
+"ndtbusser","tf88","tf62","hi20to35","cfwchcom","slunivnc","hh2fam","nfamrel",
+"tf65","p14tenure","lftaempl","moy1intep","fiu20","mtnengnon","ndtallind",
+"mps","tf47","hh6ppers","moy5non","rlrcathol","tf71","tf76","tf58","tf101",
+"fsmlabf","mtfrench","p16tenure","tf94")
+
+
+## Deleting the columns.
+
+dmm.train <- dmm.train[ , -which(names(dmm.train) %in% delete.cols)]
+dmm.test <- dmm.test[ , -which(names(dmm.test) %in% delete.cols)]
+validate.reduce <- dmm.validate[ , -which(names(dmm.validate) %in% delete.cols)]
+
+```       
+
+
+
+
+## Modelling and Evaluation:
+Data Mining is an iterative process.
+
+From the dataset reduced to 73 variables we make Four types of model. 
+The data partition as done initially is 70/15/15.
+Crossvalidation used with 3 folds.
+
+
+```{r Final Model Building Basic, fig.width=7, fig.height=6}
+
+set.seed(1234)
+# set label name and predictors
+labelName <- 'Objective'
+predictors <- names(dmm.train)[names(dmm.train) != labelName]
+dmm.train <- data.frame(lapply(dmm.train, as.numeric))
+dmm.test <- data.frame(lapply(dmm.test, as.numeric))
+dmm.validate <- data.frame(lapply(dmm.test, as.numeric))
+library(caret)
+require(pROC)
+## create a caret control object to control the number of cross-validations performed
+# Setting: adptive_cv as method
+# Either the number of folds or number of resampling iterations = 3
+# Don't save any summary Matrix from resample
+var.control <- trainControl(method='cv', number=3, returnResamp='none')
+
+# Final model 1 Nueral Network
+model_nn <- train(dmm.train[,predictors], dmm.train[,labelName], method='nnet', trControl=var.control)
+
+pred_nn <-  (ifelse(predict(object=model_nn, dmm.test[,predictors])< 0.5,0,1))
+auc_nn <- roc(dmm.test[,labelName], pred_nn)
+table(dmm.test$Objective,pred_nn)
+acc_nn <- sum(dmm.test$Objective==pred_nn) / nrow(dmm.test) #Accuracy: 0.52
+print(auc_nn$auc)  # Area under the curve: 0.5196636
+
+# benchmark model 2 Random Forest
+model.rf <- train(dmm.train[,predictors], dmm.train[,labelName], method='rf', trControl=var.control)
+
+pred_rf <-  (ifelse(predict(object=model.rf, dmm.test[,predictors])< 0.5,0,1))
+auc_rf <- roc(dmm.test[,labelName], pred_rf)
+table(dmm.test$Objective,pred_rf)
+acc_rf <- sum(dmm.test$Objective==pred_rf) / nrow(dmm.test) # Accuracy: 0.7630769231
+print(auc_rf$auc)  # Area under the curve: 0.7654202
+
+
+# benchmark model 3 Decision Tree
+model.rpart <- train(dmm.train[,predictors], dmm.train[,labelName], method='rpart', trControl=var.control)
+
+pred_rpart <-  (ifelse(predict(object=model.rpart, dmm.test[,predictors])< 0.5,0,1))
+auc_rpart <- roc(dmm.test[,labelName], pred_rpart)
+table(dmm.test$Objective,pred_rpart)
+acc_rpart <- sum(dmm.test$Objective==pred_rpart) / nrow(dmm.test) #Accuracy: 0.69538
+print(auc_rpart$auc)  # Area under the curve: 0.7518754
+
+accuracies <- c(acc_nn,acc_rpart)
+auc <- c(auc_nn$auc,auc_rpart$auc)
+fbmodels <- as.data.frame(cbind(accuracies,auc))
+colnames(fbmodels) <- c('Accuracies','AUC')
+rownames(fbmodels) <- c('FNN','FDT')
+fbmodels[ "Model" ] <- rownames(fbmodels)
+
+```
+
+As basic models accuracy doens't improve beyond the 75% we are building the model with advanced algorithms like gbm (Generalized Boosted Model), tree bagging and ensemble.
+
+```{r Final Model,message=FALSE,warning=FALSE, fig.width=7, fig.height=6}
+## Using some advance models
+# Tree Bag
+model_treebag <- train(dmm.train[,predictors], dmm.train[,labelName],
+                       method='treebag', trControl=var.control)
+# Random Forest
+model_rff <- train(dmm.train[,predictors], dmm.train[,labelName], 
+                   method='rf', trControl=var.control)
+# gbm
+model_gbm <- train(dmm.train[,predictors], dmm.train[,labelName], 
+                   method='gbm', trControl=var.control)
+
+# Building the Ensemble model
+final_blender_model <- train(dmm.validate[,predictors], dmm.validate[,labelName],
+                             method='gbm', trControl=var.control)
+
+## Validating the model
+dmm.validate$gbm_PROB <- predict(object=model_gbm, dmm.validate[,predictors])
+dmm.validate$rf_PROB <- predict(object=model_rff, dmm.validate[,predictors])
+dmm.validate$treebag_PROB <- predict(object=model_treebag, dmm.validate[,predictors])
+## Doing final predicions
+dmm.test$gbm_PROB <- (ifelse(predict(object=model_gbm, dmm.test[,predictors])<0.5,0,1))
+dmm.test$rf_PROB <- (ifelse(predict(object=model_rff, dmm.test[,predictors])<0.5,0,1))
+dmm.test$treebag_PROB <- (ifelse(predict(object=model_treebag, dmm.test[,predictors])<0.5,0,1))
+
+# see how each individual model performed on its own
+acc_gbm <- sum(dmm.test$Objective==dmm.test$gbm_PROB) / nrow(dmm.test) # Accuracy:
+auc_gbm <- roc(dmm.test[,labelName], dmm.test$gbm_PROB )
+print(auc_gbm$auc) 
+
+acc_rff <- sum(dmm.test$Objective== dmm.test$rf_PROB) / nrow(dmm.test) # Accuracy: 
+auc_rff <- roc(dmm.test[,labelName], dmm.test$rf_PROB )
+print(auc_rff$auc) # Area under the curve: 
+
+acc_tree <- sum(dmm.test$Objective== dmm.test$treebag_PROB) / nrow(dmm.test) # Accuracy: 
+auc_tree <- roc(dmm.test[,labelName], dmm.test$treebag_PROB )
+print(auc_tree$auc) 
+
+# run a final model to blend all the probabilities together
+predictors <- names(dmm.validate)[names(dmm.validate) != labelName]
+
+# See final prediction and AUC of blended ensemble
+preds_ens <- predict(object=final_blender_model, dmm.test[,predictors])
+auc_ens <- roc(dmm.test[,labelName], preds_ens)
+preds_ens
+
+preds_ens <- (ifelse(preds_ens < 0.5,0,1))
+table(dmm.test$Objective,preds_ens)
+
+acc_ens <- sum(dmm.test$Objective==preds_ens) / nrow(dmm.test) # Accuracy:0.7630769231
+print(auc_ens$auc)  # Area under the curve: 
+
+## Combining all the models into one Data Frame
+accuracies <- c(acc_gbm,acc_rff,acc_tree,acc_ens)
+auc <- c(auc_gbm$auc,auc_rff$auc,auc_tree$auc,auc_ens$auc)
+famodels <- as.data.frame(cbind(accuracies,auc))
+colnames(famodels) <- c('Accuracies','AUC')
+rownames(famodels) <- c('FGBM','FRF','FTreeBag','FEns')
+
+famodels[ "Model" ] <- rownames(famodels)
+## Adding all the models
+fmodels <- rbind(bmodels,fbmodels,famodels)
+library(reshape)
+fmodels.melt <- melt( fmodels, id.vars="Model", value.name="Accuracies", variable.name="AUC" )
+
+
+## Table Showing Accuracy and AUC
+fmodels
+
+require(ggplot2)
+require(ggthemes)
+ggplot(data=fmodels.melt, aes(x= Model, y=value, group = variable, colour = variable)) +
+        theme_economist() +
+        geom_line() + 
+        xlab("Model") +
+        ylab("Area Under Curve") +
+        ggtitle("All Model Stats") +
+        coord_cartesian(ylim= c (0,1)) +
+        geom_point()
+
+```
+
+
+##Conclusion:
+
+Ensemble accuracy `r round(fmodels['FEns',]$Accuracies * 100,2)` with Area Under the Curve `r round(fmodels['FEns',]$AUC * 100, 2)`.
+
+After applying the data mining process on dataset, we can say that for the better prediction of valuable customers who are likely to respond the model Ensemble out-performs from other models like random forests, neural networks, generic boost model, tree boost . If gender is unkown that individual is most likely not to respond to the mails. Recencies of Product plays important role while predicting the target customers like customer buying products three, fifteen and seventeen. Also person having higher income and living with high family income likely to respond.
+
+##References:
+* Data Mining and Knowledge Discovery – Springer
+* Variable selection using Random Forests - Robin Genuer, Jean Michel Poggi, Christine Tuleau-Malo
+* R Cookbook - O'Reilly
+* The Art of R Programming - Norman Matloff
+* http://www.r-tutor.com/gpu-computing/clustering/hierarchical-cluster-analysis
+* http://www.r-bloggers.com/k-means-clustering-from-r-in-action/
+* http://amunategui.github.io/blending-models/
+
+##Appendix:
+
+This report has been written as an R Markdown document.
+The implementation of R Markdown is provided by two packages:
+
+knitr — Weaves Rmd files into plain markdown (.md) files
+markdown — Converts markdown files into HTML documents
+
+Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents.
+
+Tools used in the project: RStudio, RMD.
+
+Packages used: knitr,caret, memisc, Rattle, ggplot2, FactoMineR, NbClust, MASS, HSAUR, cluster, fpc, reshape, ggthemes

@@ -1,0 +1,51 @@
+---
+title: "DMM EDA for Boxplot"
+author: "Devendra Desale (A0134465E), Abhishek (A0135870A), Ning Chao (A0134563H)"
+date: "M.Tech KE27 | DMMM Project | March 2015"
+Submitted To: Fan Zhenzhen
+output: html_document
+---
+
+
+```{r}
+require(ggplot2)
+require(ggthemes)
+dmm_data <- read.csv('/Users/abhisheksharma/Desktop/R_MoC/data/project.csv')
+variables <- read.csv('/Users/abhisheksharma/Desktop/R_MoC/data/variables.csv',header = TRUE)
+colnames(dmm_data) <-variables[,2][1:201]
+dmm.cols <- colnames(dmm_data)
+
+to_plots<-c("totalspend", "totaltrans", "tf92", "tf68")
+dmm.cols <- colnames(dmm_data)
+  
+for(i in dmm.cols[2:24]){
+  title <- paste('Boxplot Of',i)
+  print(ggplot(dmm_data, aes(y=get(i), x = as.factor(Objective), fill=factor(Objective))) +
+    geom_boxplot( position="dodge", notch = TRUE) +
+    scale_x_discrete(labels=c("Non-respondent", "Respondent"),name = 'Objective') +
+    scale_y_continuous(name=paste(i)) +
+    ggtitle(title) +
+    scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent")) +
+    theme_economist() +
+    coord_cartesian(ylim=c(min(dmm_data[,i]) - 0.05 * range(dmm_data[,i]), 
+         max(dmm_data[,i]) + 0.05 * range(dmm_data[,i])))          
+  )
+}
+
+
+for(i in dmm.cols[25:201]){
+  title <- paste('Boxplot Of',variables$Explanation[i == variables$Var.name])
+  print(ggplot(dmm_data, aes(y=get(i), x = as.factor(Objective), fill=factor(Objective))) +
+    geom_boxplot( position="dodge", notch = TRUE) +
+    scale_x_discrete(labels=c("Non-respondent", "Respondent"),name = 'Objective') +
+    scale_y_continuous(name=paste(i)) +
+    ggtitle(title) +
+    scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent")) +
+    theme_economist() +
+    coord_cartesian(ylim=c(min(dmm_data[,i]) - 0.05 * range(dmm_data[,i]), 
+         max(dmm_data[,i]) + 0.05 * range(dmm_data[,i])))          
+  )
+}
+```

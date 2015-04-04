@@ -1,0 +1,55 @@
+---
+title: "DMM EDA for Histograms"
+author: "Devendra Desale (A0134465E), Abhishek (A0135870A), Ning Chao (A0134563H)"
+date: "M.Tech KE27 | DMMM Project | March 2015"
+Submitted To: Fan Zhenzhen
+output: html_document
+---
+
+```{r}
+dmm_data <- read.csv('/Users/abhisheksharma/Desktop/R_MoC/data/project.csv')
+require(ggplot2)
+require(ggthemes)
+variables <- read.csv('/Users/abhisheksharma/Desktop/R_MoC/data/variables.csv',header = TRUE)
+colnames(dmm_data) <-variables[,2][1:201]
+var.titles <- variables[,3][1:201]
+dmm.cols <- colnames(dmm_data[2:201])
+
+to_plots<-c("gender", "gender1", "gender2","productcount", "tf129", "tf28", "fiinca", "totalspend", "rlanglic")
+```
+
+Plot the histograms of the product related data seperately
+```{r}
+###PLOTTING DATA
+for(i in dmm.cols[2:24]){
+  title <- paste('Hist Of',i)
+  print(ggplot(dmm_data, aes(x=get(i), fill=factor(Objective))) +
+        theme_wsj() +
+        geom_histogram(position="fill",binwidth = diff(range(dmm_data[,i]))/30) +
+        xlab(i) +
+        ylab(paste('Frequency of',i)) +
+        ggtitle(title) +    
+        scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent"),l=50) 
+        
+        )
+}
+```
+
+Theses histograms of all other types.
+```{r}
+i <- 'gender2'
+for(i in dmm.cols[25:200]){
+  title <- paste('Hist Of',variables$Explanation[i == variables$Var.name])
+  print(ggplot(dmm_data, aes(x=get(i), fill=factor(Objective))) +
+        theme_economist(base_size = 10) +
+        geom_histogram(position="fill",binwidth = diff(range(dmm_data[,i]))/30) +
+        xlab(i) +
+        ylab(paste('Frequency of',i)) +
+        ggtitle(title) +
+        scale_fill_hue(name="Objective",
+                       labels=c("Non-Respondent", "Respondent"),l=50) 
+        )
+}
+
+```
